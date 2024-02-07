@@ -1,6 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const User = require('./schema/User');
+require('dotenv').config();
+const authMiddleware = require('./middleware');
 
 //initialize express
 const app = express();
@@ -16,7 +19,7 @@ mongoose.connect('mongodb://mongo:27017/chatApp')
     .catch(err => console.log("Error!: ", err));
 
 
-//routing
+//sign up / register
 app.post('/register', async (req, res) => {
     const { userName, password, email } = req.body;
 
@@ -35,6 +38,28 @@ app.post('/register', async (req, res) => {
 
     res.status(201).json({ message: 'User created successfully', user: newUser });
 });
+
+//signin / login
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if the password is correct
+    const isMatch = await user.comparePassword(password); //uses bcrypt to compair the plain-text to hashed password in db
+    if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    //login successful so generate a JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {expiresIn: '24h'});
+
+    res.status(200).json({ message: 'Login successful', user: { id: user._id, userName: user.userName, email: user.email, token: token } });
+});
+
 
 
 app.listen(port, () => {
