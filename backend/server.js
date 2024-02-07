@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('./schema/User');
+const ChatMessage = require('./schema/ChatMessage'); 
+
 require('dotenv').config();
 const cors = require('cors');
 const authMiddleware = require('./middleware');
@@ -24,7 +26,7 @@ app.use(express.json());
 //read url-encoded data
 app.use(express.urlencoded({ extended: true }));
 
-app.use(cors());
+app.use(cors()); //needed or else browser gives a bunch of CORS errors :c
 
 //connect to mongo container
 mongoose.connect('mongodb://mongo:27017/chatApp')
@@ -76,20 +78,58 @@ app.post('/login', async (req, res) => {
 //RESTful routes END
 
 // Socket.io logic
+
+io.use((socket, next) => {
+    const token = socket.handshake.query.token;
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) return next(new Error('Authentication error'));
+      socket.userId = decoded.id; // You can then access the userId on the socket object
+      next();
+    });
+  });
+  
+
 io.on('connection', (socket) => {
     console.log(`New WebSocket connection: ${socket.id}`);
 
     // Joining a room
     socket.on('joinRoom', ({ roomName }) => {
         socket.join(roomName);
-        console.log(`User ${socket.id} joined room: ${roomName}`);
-        socket.to(roomName).emit('notification', `A new user has joined ${roomName}`);
-    });
+        
+        ChatMessage.find({ room: roomName })
+          .sort({ timestamp: -1 })
+          .limit(50)
+          .populate('user', 'userName') 
+          .exec((err, messages) => {
+            if (err) {
+              console.error('Error loading chat history', err);
+            } else {
+              // Send the messages to the user
+              socket.emit('chatHistory', messages.map(msg => ({ from_user: msg.user.userName, text: msg.message })));
+            }
+          });
+      });
+      
 
-    // Sending a message to a room
+    // save room message
     socket.on('sendMessage', ({ roomName, message }) => {
-        io.to(roomName).emit('message', { text: message });
-    });
+        const chatMessage = new ChatMessage({
+          room: roomName,
+          user: socket.userId,
+          message: message.text
+        });
+      
+        chatMessage.save(async (err, savedMessage) => {
+          if (err) {
+            console.error('Error saving message to database', err);
+          } else {
+            const populatedMessage = await savedMessage.populate('user', 'userName').execPopulate();
+            io.to(roomName).emit('message', { from_user: populatedMessage.user.userName, text: message.text });
+          }
+        });
+      });
+      
+      
 
     // Leaving a room
     socket.on('leaveRoom', ({ roomName }) => {
@@ -104,7 +144,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// Use server.listen instead of app.listen
+
 server.listen(port, () => {
     console.log(`Server running on port: ${port}`);
 });
