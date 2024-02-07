@@ -5,18 +5,26 @@ const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('./schema/User');
 require('dotenv').config();
+const cors = require('cors');
 const authMiddleware = require('./middleware');
 
 //initialize express
 const app = express();
 const server = http.createServer(app); //wraps the express app
-const io = socketIo(server); //attach  socket.io to http server (which is wrapped onto express server)
+const io = socketIo(server, { //attach  socket.io to http server (which is wrapped onto express server)
+    cors: {   //need this because browser console giving a bunch of cors errors
+        origin: "*", //set to all for testing, can specify just my react app later on
+        methods: ["GET", "POST"]
+    }
+}); 
 
 const port = 3001; //react will run on 3000 so i set this to 3001
 //to parse json req bodies
 app.use(express.json());
 //read url-encoded data
 app.use(express.urlencoded({ extended: true }));
+
+app.use(cors());
 
 //connect to mongo container
 mongoose.connect('mongodb://mongo:27017/chatApp')
