@@ -1,5 +1,7 @@
 const express = require('express');
+const http = require('http');
 const mongoose = require('mongoose');
+const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('./schema/User');
 require('dotenv').config();
@@ -7,7 +9,10 @@ const authMiddleware = require('./middleware');
 
 //initialize express
 const app = express();
-const port = 3001; //react will run on 3000. 
+const server = http.createServer(app); //wraps the express app
+const io = socketIo(server); //attach  socket.io to http server (which is wrapped onto express server)
+
+const port = 3001; //react will run on 3000 so i set this to 3001
 //to parse json req bodies
 app.use(express.json());
 //read url-encoded data
@@ -18,7 +23,7 @@ mongoose.connect('mongodb://mongo:27017/chatApp')
     .then(() => console.log('MongoDB connected!'))
     .catch(err => console.log("Error!: ", err));
 
-
+//RESTful routes START
 //sign up / register
 app.post('/register', async (req, res) => {
     const { userName, password, email } = req.body;
@@ -60,8 +65,38 @@ app.post('/login', async (req, res) => {
     res.status(200).json({ message: 'Login successful', user: { id: user._id, userName: user.userName, email: user.email, token: token } });
 });
 
+//RESTful routes END
 
+// Socket.io logic
+io.on('connection', (socket) => {
+    console.log(`New WebSocket connection: ${socket.id}`);
 
-app.listen(port, () => {
+    // Joining a room
+    socket.on('joinRoom', ({ roomName }) => {
+        socket.join(roomName);
+        console.log(`User ${socket.id} joined room: ${roomName}`);
+        socket.to(roomName).emit('notification', `A new user has joined ${roomName}`);
+    });
+
+    // Sending a message to a room
+    socket.on('sendMessage', ({ roomName, message }) => {
+        io.to(roomName).emit('message', { text: message });
+    });
+
+    // Leaving a room
+    socket.on('leaveRoom', ({ roomName }) => {
+        socket.leave(roomName);
+        console.log(`User ${socket.id} left room: ${roomName}`);
+        socket.to(roomName).emit('notification', `A user has left ${roomName}`);
+    });
+
+    // Handling disconnect
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
+});
+
+// Use server.listen instead of app.listen
+server.listen(port, () => {
     console.log(`Server running on port: ${port}`);
-})
+});
