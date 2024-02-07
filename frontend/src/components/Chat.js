@@ -1,9 +1,9 @@
-// Chat.js
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
+import './Chat.css';
 
 // Establish connection with socket.io server
-const socket = io('http://localhost:3001'); // Adjust this to match your server's address
+const socket = io('http://localhost:3001', { transports: ['websocket'] }); // Adjust this to match your server's address
 
 function Chat() {
     const [room, setRoom] = useState('devops'); // Default room
@@ -60,13 +60,13 @@ function Chat() {
                 <option value="nodeJS">NodeJS</option>
             </select>
             
-            <div style={{ height: '300px', overflowY: 'auto', marginTop: '10px' }}>
+            <div className="messageContainer">
                 {messages.map((msg, index) => (
-                    <div key={index} style={{ backgroundColor: '#f4f4f4', margin: '5px', padding: '10px', borderRadius: '10px' }}>
+                    <div key={index} className="messageBubble">
                         <strong>{msg.from_user || 'Anonymous'}:</strong> {typeof msg.text === 'object' ? msg.text.text : msg.text}
                     </div>
                 ))}
-                {/* Invisible element for auto-scrolling */}
+                
                 <div ref={messagesEndRef} />
             </div>
             

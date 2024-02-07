@@ -112,22 +112,22 @@ io.on('connection', (socket) => {
       
 
     // save room message
-    socket.on('sendMessage', ({ roomName, message }) => {
+    socket.on('sendMessage', async ({ roomName, message }) => {
+      try {
         const chatMessage = new ChatMessage({
           room: roomName,
           user: socket.userId,
           message: message.text
         });
       
-        chatMessage.save(async (err, savedMessage) => {
-          if (err) {
-            console.error('Error saving message to database', err);
-          } else {
-            const populatedMessage = await savedMessage.populate('user', 'userName').execPopulate();
-            io.to(roomName).emit('message', { from_user: populatedMessage.user.userName, text: message.text });
-          }
-        });
-      });
+        const savedMessage = await chatMessage.save();
+        const populatedMessage = await savedMessage.populate('user', 'userName').execPopulate();
+        io.to(roomName).emit('message', { from_user: populatedMessage.user.userName, text: message.text });
+      } catch (err) {
+        console.error('Error saving message to database', err);
+      }
+    });
+    
       
       
 
