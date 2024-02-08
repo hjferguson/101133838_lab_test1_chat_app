@@ -113,7 +113,7 @@ io.on('connection', (socket) => {
       
       try {
         const messages = await ChatMessage.find({ room: roomName })
-          .sort({ timestamp: -1 })
+          .sort({ timestamp: 1 })
           .limit(50)
           .populate('user', 'userName')
           .exec(); 
