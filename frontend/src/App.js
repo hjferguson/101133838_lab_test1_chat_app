@@ -15,7 +15,7 @@ function App() {
         <Route 
           path="/chat" 
           element={
-            localStorage.getItem('token') ? <Chat /> : <Navigate replace to="/login" />
+            localStorage.getItem('token') ? <Chat /> : <Navigate replace to="/" />
           } 
         />
         {/* Redirect to home if no match found */}

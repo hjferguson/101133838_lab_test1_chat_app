@@ -2,40 +2,63 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import './Chat.css';
 
-// Establish connection with socket.io server
-const socket = io('http://localhost:3001', { transports: ['websocket'] }); // Adjust this to match your server's address
-
 function Chat() {
     const [room, setRoom] = useState('devops'); // Default room
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState([]);
     const messagesEndRef = useRef(null);
+    const socket = useRef(null); // Use useRef to keep the socket instance
 
-    // Effect for handling messages
     useEffect(() => {
-        socket.emit('joinRoom', { roomName: room });
+        // Retrieve the token from local storage (browser)
+        const token = localStorage.getItem('token'); // Assuming the token is stored with the key 'token'
+        
+        // Initialize socket connection and store it in the useRef
+        socket.current = io('http://localhost:3001', { 
+            transports: ['websocket'], 
+            query: { token } 
+        });
 
-        socket.on('message', (message) => {
+        socket.current.on('chatHistory', (history) => {
+            console.log('Received chat history:', history);
+            // Directly map over the history if it's already in the expected format
+            const formattedHistory = history.map(msg => ({
+                from_user: msg.from_user,
+                text: msg.text
+            }));
+            setMessages(formattedHistory);
+        });
+        
+
+        socket.current.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+        });
+
+        socket.current.onAny((event, ...args) => {
+            console.log(`Received event: ${event}`, args);
+          });
+          
+
+        socket.current.emit('joinRoom', { roomName: room });
+
+        socket.current.on('message', (message) => {
+            console.log('Received message:', message);
             setMessages((msgs) => [...msgs, message]);
         });
 
         return () => {
-            socket.off('message');
+            socket.current.off('message');
+            socket.current.disconnect();
         };
     }, [room]);
-
-    // Effect for auto-scrolling
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
 
     const sendMessage = () => {
         if (message) {
             const messageToSend = {
-                // from_user: username, // Uncomment and replace with actual sender's username
                 text: message
             };
-            socket.emit('sendMessage', { roomName: room, message: messageToSend });
+            console.log('Sending message:', messageToSend);
+            socket.current.emit('sendMessage', { roomName: room, message: messageToSend });
             setMessage('');
         }
     };
@@ -43,12 +66,14 @@ function Chat() {
     const handleRoomChange = (e) => {
         const newRoom = e.target.value;
         if (newRoom !== room) {
-            socket.emit('leaveRoom', { roomName: room });
+            socket.current.emit('leaveRoom', { roomName: room });
             setRoom(newRoom);
             setMessages([]);
-            socket.emit('joinRoom', { roomName: newRoom });
+            socket.current.emit('joinRoom', { roomName: newRoom });
         }
     };
+
+    
 
     return (
         <div>

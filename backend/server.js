@@ -91,24 +91,28 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
     console.log(`New WebSocket connection: ${socket.id}`);
-
+    //test to see if i can send a simple message to client
+    socket.emit('message', { from_user: 'Server', text: 'Welcome!'});
+    
     // Joining a room
-    socket.on('joinRoom', ({ roomName }) => {
-        socket.join(roomName);
-        
-        ChatMessage.find({ room: roomName })
+    socket.on('joinRoom', async ({ roomName }) => {
+      console.log(`${socket.id} is attempting to join room: ${roomName}`); // Added log
+      try {
+        const messages = await ChatMessage.find({ room: roomName })
           .sort({ timestamp: -1 })
           .limit(50)
-          .populate('user', 'userName') 
-          .exec((err, messages) => {
-            if (err) {
-              console.error('Error loading chat history', err);
-            } else {
-              // Send the messages to the user
-              socket.emit('chatHistory', messages.map(msg => ({ from_user: msg.user.userName, text: msg.message })));
-            }
-          });
-      });
+          .populate('user', 'userName')
+          .exec(); 
+
+        console.log(`${socket.id} joined room: ${roomName} and found ${messages.length} messages`); // Log after successful query
+
+        socket.emit('chatHistory', messages.map(msg => ({ from_user: msg.user.userName, text: msg.message })));
+      } catch (err) {
+        console.error('Error loading chat history', err);
+      }
+    });
+
+    
       
 
     // save room message
@@ -120,9 +124,11 @@ io.on('connection', (socket) => {
           message: message.text
         });
       
+        // After saving the message, directly populate without using execPopulate
         const savedMessage = await chatMessage.save();
-        const populatedMessage = await savedMessage.populate('user', 'userName').execPopulate();
-        io.to(roomName).emit('message', { from_user: populatedMessage.user.userName, text: message.text });
+        const populatedMessage = await ChatMessage.findById(savedMessage._id).populate('user', 'userName');
+        console.log("populated message from db: ", populatedMessage)
+        io.to(roomName).emit('message', { from_user: populatedMessage.user.userName, text: populatedMessage.message });
       } catch (err) {
         console.error('Error saving message to database', err);
       }
