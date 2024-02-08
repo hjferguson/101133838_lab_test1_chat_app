@@ -129,6 +129,17 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 30%; /* Ensures the bubble doesn't exceed the container width */
 }
 
+.systemMessage {
+  background-color: #000000;
+  color: #ffffff;
+  border-radius: 15px;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: block; /* Change from inline-block to block */
+  max-width: 30%; /* Ensures the bubble doesn't exceed the container width */
+}
+
+
 .messageBubble strong {
   color: #f1f1f1;
 }

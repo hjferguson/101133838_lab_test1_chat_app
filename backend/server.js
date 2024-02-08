@@ -90,6 +90,7 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
     console.log(`New WebSocket connection: ${socket.id}`);
+    console.log(socket);
     //test to see if i can send a simple message to client
     socket.emit('message', { from_user: 'Server', text: 'Welcome!'});
     
@@ -97,6 +98,19 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', async ({ roomName }) => {
       socket.join(roomName);
       console.log(`${socket.id} is attempting to join room: ${roomName}`); // Added log
+
+      const user = await User.findById(socket.userId);
+
+      if(user){
+        const joinMessage = {
+          from_user: 'Server',
+          text: `${user.userName} has joined the room ${roomName}.`,
+          _id: new mongoose.Types.ObjectId() // Generate a unique ID for this system message
+        };
+        io.to(roomName).emit('message', joinMessage);
+      }
+
+      
       try {
         const messages = await ChatMessage.find({ room: roomName })
           .sort({ timestamp: -1 })
@@ -138,10 +152,26 @@ io.on('connection', (socket) => {
       
 
     // Leaving a room
-    socket.on('leaveRoom', ({ roomName }) => {
-        socket.leave(roomName);
+    socket.on('leaveRoom', async ({ roomName }) => {
+        
         console.log(`User ${socket.id} left room: ${roomName}`);
-        socket.to(roomName).emit('notification', `A user has left ${roomName}`);
+
+        const user = await User.findById(socket.userId);
+
+      if(user){
+        const leaveMessage = {
+          from_user: 'Server',
+          text: `${user.userName} has left the room ${roomName}.`,
+          _id: new mongoose.Types.ObjectId() // Generate a unique ID for this system message
+        };
+        io.to(roomName).emit('message', leaveMessage);
+        socket.leave(roomName);
+        // socket.to(roomName).emit('notification', `A user has left ${roomName}`);
+
+        console.log(leaveMessage);
+      }
+
+        
     });
 
     // Handling disconnect

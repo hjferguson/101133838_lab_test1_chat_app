@@ -94,13 +94,13 @@ function Chat() {
             
             <div className="messageContainer">
                 {messages.map((msg) => (
-                    <div key={msg._id} className="messageBubble">
-                        <strong>{msg.from_user || 'Anonymous'}:</strong> {typeof msg.text === 'object' ? msg.text.text : msg.text}
+                    <div key={msg._id} className={`messageBubble ${msg.from_user === 'Server' ? 'systemMessage' : ''}`}>
+                        <strong>{msg.from_user || 'Anonymous'}:</strong> {msg.text}
                     </div>
                 ))}
-                
                 <div ref={messagesEndRef} />
             </div>
+
             
                 <input className="input"
                     type="text"
