@@ -74,6 +74,12 @@ function Chat() {
         }
     };
 
+    useEffect(() => {
+        // Scroll to the last message
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]); // Dependency array includes messages to trigger effect on update
+    
+
     
 
     return (
@@ -87,8 +93,8 @@ function Chat() {
             </select>
             
             <div className="messageContainer">
-                {messages.map((msg, index) => (
-                    <div key={index} className="messageBubble">
+                {messages.map((msg) => (
+                    <div key={msg._id} className="messageBubble">
                         <strong>{msg.from_user || 'Anonymous'}:</strong> {typeof msg.text === 'object' ? msg.text.text : msg.text}
                     </div>
                 ))}

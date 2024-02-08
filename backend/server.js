@@ -8,7 +8,6 @@ const ChatMessage = require('./schema/ChatMessage');
 
 require('dotenv').config();
 const cors = require('cors');
-const authMiddleware = require('./middleware');
 
 //initialize express
 const app = express();
@@ -96,6 +95,7 @@ io.on('connection', (socket) => {
     
     // Joining a room
     socket.on('joinRoom', async ({ roomName }) => {
+      socket.join(roomName);
       console.log(`${socket.id} is attempting to join room: ${roomName}`); // Added log
       try {
         const messages = await ChatMessage.find({ room: roomName })
