@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-import './Chat.css';
+import LogoutButton from './LogoutButton';
+
 
 function Chat() {
     const [room, setRoom] = useState('devops'); // Default room
@@ -76,7 +77,7 @@ function Chat() {
     
 
     return (
-        <div>
+        <div className='container'>
             <select onChange={handleRoomChange} value={room}>
                 <option value="devops">DevOps</option>
                 <option value="cloud computing">Cloud Computing</option>
@@ -95,14 +96,19 @@ function Chat() {
                 <div ref={messagesEndRef} />
             </div>
             
-            <input
-                type="text"
-                placeholder="Type a message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-            />
+                <input className="input"
+                    type="text"
+                    placeholder="Type a message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                />
             <button onClick={sendMessage}>Send Message</button>
+            <div>
+                <LogoutButton />
+            </div>
+            
+            
         </div>
     );
 }

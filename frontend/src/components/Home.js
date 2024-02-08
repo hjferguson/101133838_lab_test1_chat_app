@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 function Home() {
   return (
-    <div>
+    <div className='container'>
       <h1>Welcome to the Chat App</h1>
       <Link to="/login">Login</Link>
       <br />
